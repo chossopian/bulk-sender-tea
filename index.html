@@ -18,7 +18,7 @@
   <input type="number" id="amount" placeholder="Contoh: 10" />
 
   <label>Daftar Wallet (satu per baris):</label>
-  <textarea id="wallets" rows="10" placeholder="0xabc123...\n0xdef456...\n"></textarea>
+  <textarea id="wallets" rows="10" placeholder="0xabc123...\\n0xdef456...\\n"></textarea>
 
   <button onclick="startSending()">Kirim Token</button>
 
@@ -62,33 +62,12 @@
     async function startSending() {
       const status = document.getElementById("status");
       status.innerText = "";
-      await switchToTEASepolia();
 
-      const [account] = await ethereum.request({ method: 'eth_requestAccounts' });
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      const signer = provider.getSigner();
-      const token = new ethers.Contract(tokenAddress, tokenAbi, signer);
-
-      const rawWallets = document.getElementById("wallets").value.trim().split("\n");
-      const amount = ethers.utils.parseUnits(document.getElementById("amount").value, tokenDecimals);
-
-      for (let i = 0; i < rawWallets.length; i++) {
-        const wallet = rawWallets[i].trim();
-        if (!ethers.utils.isAddress(wallet)) {
-          status.innerText += `Lewat: ${wallet} (bukan alamat valid)\n`;
-          continue;
-        }
-        try {
-          const tx = await token.transfer(wallet, amount);
-          status.innerText += `Mengirim ke ${wallet}... TX: ${tx.hash}\n`;
-          await tx.wait();
-        } catch (err) {
-          status.innerText += `Gagal kirim ke ${wallet}: ${err.message}\n`;
-        }
+      // Tunggu sampai MetaMask siap
+      if (typeof window.ethereum === "undefined") {
+        status.innerText = "MetaMask tidak terdeteksi!";
+        return;
       }
 
-      status.innerText += "\nSelesai.";
-    }
-  </script>
-</body>
-</html>
+      await switchToTEASepolia();
+      const [account] = await ethereum.request({ method: 'eth_request_
