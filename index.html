@@ -25,6 +25,11 @@
   <div id="status"></div>
 
   <script>
+    // Menunggu ethers.js dimuat
+    if (typeof ethers === 'undefined') {
+      alert("Ethers.js tidak terdeteksi! Pastikan halaman ini terhubung dengan benar.");
+    }
+
     const tokenAddress = "0xb68d3a2f01871b2A67aFCa631056da6CAC6D9Ad9";
     const tokenDecimals = 18;
     const chainId = "0x27EA"; // 10218 desimal ke hex
@@ -34,6 +39,7 @@
       "function decimals() public view returns (uint8)"
     ];
 
+    // Fungsi untuk switch ke jaringan TEA Sepolia
     async function switchToTEASepolia() {
       try {
         await window.ethereum.request({
@@ -41,7 +47,6 @@
           params: [{ chainId }],
         });
       } catch (switchError) {
-        // Jika belum ditambahkan
         if (switchError.code === 4902) {
           await window.ethereum.request({
             method: 'wallet_addEthereumChain',
@@ -59,15 +64,43 @@
       }
     }
 
+    // Fungsi utama untuk mengirim token
     async function startSending() {
       const status = document.getElementById("status");
       status.innerText = "";
 
-      // Tunggu sampai MetaMask siap
+      // Cek apakah MetaMask tersedia
       if (typeof window.ethereum === "undefined") {
         status.innerText = "MetaMask tidak terdeteksi!";
         return;
       }
 
       await switchToTEASepolia();
-      const [account] = await ethereum.request({ method: 'eth_request_
+      const [account] = await ethereum.request({ method: 'eth_requestAccounts' });
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const signer = provider.getSigner();
+      const token = new ethers.Contract(tokenAddress, tokenAbi, signer);
+
+      const rawWallets = document.getElementById("wallets").value.trim().split("\n");
+      const amount = ethers.utils.parseUnits(document.getElementById("amount").value, tokenDecimals);
+
+      for (let i = 0; i < rawWallets.length; i++) {
+        const wallet = rawWallets[i].trim();
+        if (!ethers.utils.isAddress(wallet)) {
+          status.innerText += `Lewat: ${wallet} (bukan alamat valid)\n`;
+          continue;
+        }
+        try {
+          const tx = await token.transfer(wallet, amount);
+          status.innerText += `Mengirim ke ${wallet}... TX: ${tx.hash}\n`;
+          await tx.wait();
+        } catch (err) {
+          status.innerText += `Gagal kirim ke ${wallet}: ${err.message}\n`;
+        }
+      }
+
+      status.innerText += "\nSelesai.";
+    }
+  </script>
+</body>
+</html>
